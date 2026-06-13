@@ -110,6 +110,7 @@ def status() -> StatusResponse:
         indexing=summary.indexing,
         discovered=summary.discovered,
         failed=summary.failed,
+        no_dialogue=summary.no_dialogue,
         removed=summary.removed,
         watched_playlists=summary.watched_playlists,
     )
@@ -157,7 +158,7 @@ def search(
             )
 
     if mode in ("film", "director", "all"):
-        for video in current_kit.list_videos(status=VideoStatus.READY, limit=500):
+        for video in current_kit.list_catalog_videos(limit=500):
             meta = parse_film_title(video.title)
             film_match = mode in ("film", "all") and meta.film_title and query_lower in meta.film_title.lower()
             director_match = (

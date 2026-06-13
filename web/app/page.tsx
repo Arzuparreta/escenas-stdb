@@ -13,6 +13,7 @@ import {
 
 function statusLabel(status: string) {
   if (status === "ready") return "Lista";
+  if (status === "no_dialogue") return "Sin diálogo";
   if (status === "indexing" || status === "discovered") return "Procesando…";
   if (status === "failed") return "Error";
   return status;
@@ -32,7 +33,7 @@ export default function HomePage() {
       try {
         const [status, scenes] = await Promise.all([getStatus(), listScenes()]);
         setStatusText(
-          `${status.ready} listas · ${status.indexing + status.discovered} procesando · ${status.total} total`,
+          `${status.ready} listas · ${status.no_dialogue} sin diálogo · ${status.indexing + status.discovered} procesando · ${status.total} total`,
         );
         setRecent(scenes.slice(0, 12));
       } catch {

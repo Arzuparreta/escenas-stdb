@@ -37,6 +37,7 @@ export interface StatusSummary {
   indexing: number;
   discovered: number;
   failed: number;
+  no_dialogue: number;
   removed: number;
   watched_playlists: number;
 }

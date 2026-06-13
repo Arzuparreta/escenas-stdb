@@ -9,6 +9,7 @@ class StatusResponse(BaseModel):
     indexing: int
     discovered: int
     failed: int
+    no_dialogue: int
     removed: int
     watched_playlists: int
 

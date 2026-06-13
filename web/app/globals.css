@@ -179,6 +179,11 @@ select {
   color: var(--processing);
 }
 
+.badge.no_dialogue {
+  background: rgba(192, 132, 252, 0.15);
+  color: #c084fc;
+}
+
 .badge.failed {
   background: rgba(248, 113, 113, 0.15);
   color: var(--failed);
