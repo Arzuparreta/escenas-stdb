@@ -64,13 +64,16 @@ async def lifespan(_: FastAPI):
 
 
 app = FastAPI(title="escenas-stdb", lifespan=lifespan)
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=settings.cors_origin_list,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+cors_kwargs: dict = {
+    "allow_credentials": True,
+    "allow_methods": ["*"],
+    "allow_headers": ["*"],
+}
+if settings.cors_origins.strip() == "*":
+    cors_kwargs["allow_origin_regex"] = r".*"
+else:
+    cors_kwargs["allow_origins"] = settings.cors_origin_list
+app.add_middleware(CORSMiddleware, **cors_kwargs)
 
 
 def _get_kit() -> StdbKit:

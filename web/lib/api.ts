@@ -1,4 +1,12 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+function apiBase(): string {
+  if (process.env.NEXT_PUBLIC_API_URL) {
+    return process.env.NEXT_PUBLIC_API_URL;
+  }
+  if (typeof window !== "undefined") {
+    return `http://${window.location.hostname}:8000`;
+  }
+  return "http://localhost:8000";
+}
 
 export type SearchMode = "phrase" | "film" | "director" | "all";
 
@@ -48,7 +56,7 @@ export async function searchScenes(
   exact = false,
 ): Promise<SearchHit[]> {
   const params = new URLSearchParams({ q: query, mode, exact: String(exact) });
-  const response = await fetch(`${API_BASE}/search?${params}`);
+  const response = await fetch(`${apiBase()}/search?${params}`);
   if (!response.ok) throw new Error("Search failed");
   const data = await response.json();
   return data.results;
@@ -56,13 +64,13 @@ export async function searchScenes(
 
 export async function listScenes(status?: string): Promise<Scene[]> {
   const params = status ? `?status=${status}` : "";
-  const response = await fetch(`${API_BASE}/scenes${params}`);
+  const response = await fetch(`${apiBase()}/scenes${params}`);
   if (!response.ok) throw new Error("Failed to load scenes");
   return response.json();
 }
 
 export async function getStatus(): Promise<StatusSummary> {
-  const response = await fetch(`${API_BASE}/status`);
+  const response = await fetch(`${apiBase()}/status`);
   if (!response.ok) throw new Error("Failed to load status");
   return response.json();
 }

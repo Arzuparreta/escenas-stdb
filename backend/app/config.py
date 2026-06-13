@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     webhook_port: int = 8787
     api_host: str = "0.0.0.0"
     api_port: int = 8000
-    cors_origins: str = "http://localhost:6173"
+    cors_origins: str = "*"
 
     @property
     def cors_origin_list(self) -> list[str]:
