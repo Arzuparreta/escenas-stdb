@@ -74,3 +74,15 @@ export async function getStatus(): Promise<StatusSummary> {
   if (!response.ok) throw new Error("Failed to load status");
   return response.json();
 }
+
+/** YouTube no-cookie embed URL starting at the given second. */
+export function embedUrl(youtubeId: string, startSec = 0): string {
+  const start = Math.max(0, Math.floor(startSec));
+  const params = new URLSearchParams({
+    start: String(start),
+    autoplay: "1",
+    rel: "0",
+    modestbranding: "1",
+  });
+  return `https://www.youtube-nocookie.com/embed/${youtubeId}?${params}`;
+}

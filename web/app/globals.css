@@ -1,195 +1,414 @@
-:root {
-  color-scheme: dark;
-  --bg: #0f1115;
-  --surface: #171a21;
-  --border: #2a3140;
-  --text: #e8ecf4;
-  --muted: #9aa4b8;
-  --accent: #e8c547;
-  --accent-dim: #a68f2f;
-  --ready: #4ade80;
-  --processing: #60a5fa;
-  --failed: #f87171;
+@import "tailwindcss";
+
+/* ============================================================
+   EL ARCHIVO — design system
+   "Polvo y Oro": un archivo de cine con alma western.
+   ============================================================ */
+
+@theme {
+  /* — Surfaces (warm, near-black ink) — */
+  --color-ink: #0c0a07;
+  --color-ink-2: #131009;
+  --color-surface: #1a160f;
+  --color-surface-2: #221c13;
+  --color-line: #3a2f22;
+  --color-line-soft: #2a2218;
+
+  /* — Type — */
+  --color-bone: #f1e7d4;
+  --color-bone-dim: #d6c8af;
+  --color-muted: #a8997e;
+  --color-faint: #6f6452;
+
+  /* — Gold (primary accent) — */
+  --color-gold: #e6b450;
+  --color-gold-bright: #f4cd6e;
+  --color-gold-deep: #b8821f;
+
+  /* — Rust / terracotta (secondary) — */
+  --color-rust: #bd5f35;
+  --color-rust-deep: #8a3f20;
+  --color-maroon: #4a1f17;
+
+  /* — Status (warm-tuned, semantic) — */
+  --color-st-ready: #95c47d;
+  --color-st-processing: #e3a83d;
+  --color-st-quiet: #b49ac9;
+  --color-st-failed: #d6604a;
+
+  /* — Fonts (wired from next/font in layout.tsx) — */
+  --font-display: var(--font-oswald), "Oswald", sans-serif;
+  --font-body: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-wood: var(--font-rye), var(--font-oswald), serif;
+
+  /* — Radii — */
+  --radius-card: 16px;
+  --radius-frame: 10px;
+
+  /* — Shadows (warm) — */
+  --shadow-frame: 0 1px 0 0 rgba(241, 231, 212, 0.04),
+    0 18px 40px -20px rgba(0, 0, 0, 0.9);
+  --shadow-lift: 0 1px 0 0 rgba(241, 231, 212, 0.07),
+    0 30px 60px -24px rgba(0, 0, 0, 0.95),
+    0 0 0 1px rgba(230, 180, 80, 0.08);
+
+  /* — Easing — */
+  --ease-reel: cubic-bezier(0.16, 1, 0.3, 1);
 }
+
+/* ============================================================
+   Base
+   ============================================================ */
 
 * {
   box-sizing: border-box;
+}
+
+html {
+  color-scheme: dark;
+  -webkit-text-size-adjust: 100%;
+  scrollbar-color: var(--color-line) transparent;
 }
 
 html,
 body {
   margin: 0;
   padding: 0;
-  background: var(--bg);
-  color: var(--text);
-  font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+}
+
+body {
+  background-color: var(--color-ink);
+  color: var(--color-bone);
+  font-family: var(--font-body);
+  font-feature-settings: "cv05", "ss01";
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  min-height: 100dvh;
+}
+
+/* Fixed warm glow behind everything. A dedicated layer (rather than
+   background-attachment: fixed on body) avoids iOS Safari scroll jank. */
+.fx-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    radial-gradient(120% 80% at 50% -10%, rgba(189, 95, 53, 0.12), transparent 55%),
+    radial-gradient(90% 60% at 85% 0%, rgba(230, 180, 80, 0.08), transparent 50%),
+    linear-gradient(180deg, var(--color-ink) 0%, #0a0805 100%);
+}
+
+::selection {
+  background: var(--color-gold);
+  color: #1a1206;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 11px;
+  height: 11px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-line);
+  border: 3px solid var(--color-ink);
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-gold-deep);
+}
+
+/* Focus ring — amber, everywhere */
+:focus-visible {
+  outline: 2px solid var(--color-gold);
+  outline-offset: 2px;
+  border-radius: 4px;
 }
 
 a {
-  color: var(--accent);
+  color: var(--color-gold);
+  text-decoration: none;
 }
 
-button,
-input,
-select {
+button {
   font: inherit;
-}
-
-.container {
-  max-width: 960px;
-  margin: 0 auto;
-  padding: 2rem 1.25rem 4rem;
-}
-
-.hero h1 {
-  margin: 0 0 0.5rem;
-  font-size: clamp(2rem, 5vw, 3rem);
-  letter-spacing: -0.03em;
-}
-
-.hero p {
-  margin: 0 0 2rem;
-  color: var(--muted);
-  max-width: 42rem;
-  line-height: 1.6;
-}
-
-.search-panel {
-  display: grid;
-  gap: 0.75rem;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  padding: 1rem;
-}
-
-.search-row {
-  display: grid;
-  gap: 0.75rem;
-}
-
-@media (min-width: 720px) {
-  .search-row {
-    grid-template-columns: 1fr auto auto;
-    align-items: center;
-  }
-}
-
-.search-input {
-  width: 100%;
-  padding: 0.85rem 1rem;
-  border-radius: 10px;
-  border: 1px solid var(--border);
-  background: #0c0e13;
-  color: var(--text);
-}
-
-.mode-select,
-.search-button {
-  padding: 0.85rem 1rem;
-  border-radius: 10px;
-  border: 1px solid var(--border);
-  background: #0c0e13;
-  color: var(--text);
-}
-
-.search-button {
-  background: linear-gradient(180deg, var(--accent), var(--accent-dim));
-  color: #15120a;
-  border: none;
-  font-weight: 700;
   cursor: pointer;
 }
 
-.status-bar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-  margin: 1.25rem 0 2rem;
-  color: var(--muted);
-  font-size: 0.95rem;
+input {
+  font: inherit;
 }
 
-.results,
-.recent {
-  display: grid;
-  gap: 1rem;
-}
+/* ============================================================
+   Typography helpers
+   ============================================================ */
 
-.section-title {
-  margin: 2rem 0 1rem;
-  font-size: 1.1rem;
+.font-credit {
+  font-family: var(--font-display);
   text-transform: uppercase;
-  letter-spacing: 0.12em;
-  color: var(--muted);
+  letter-spacing: 0.28em;
+  font-weight: 500;
 }
 
-.card {
-  display: grid;
-  grid-template-columns: 120px 1fr;
-  gap: 1rem;
-  padding: 1rem;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 14px;
+.font-billing {
+  font-family: var(--font-display);
+  letter-spacing: -0.01em;
+  font-weight: 600;
 }
 
-.thumb {
-  width: 120px;
-  aspect-ratio: 16 / 9;
-  object-fit: cover;
-  border-radius: 8px;
-  background: #0c0e13;
+.wordmark {
+  font-family: var(--font-wood);
+  letter-spacing: 0.01em;
+  font-weight: 400;
 }
 
-.card h3 {
-  margin: 0 0 0.35rem;
-  font-size: 1.1rem;
+/* Warm glow for quoted (exact-phrase) text in the search input.
+   Static layered shadow — subtle, elegant, no flicker on keystroke. */
+.quote-glow {
+  text-shadow:
+    0 0 5px rgba(244, 205, 110, 0.5),
+    0 0 16px rgba(230, 180, 80, 0.3);
 }
 
-.meta {
-  color: var(--muted);
-  margin-bottom: 0.5rem;
+/* ============================================================
+   Cinematic texture — grain + vignette overlays
+   ============================================================ */
+
+.fx-grain {
+  position: fixed;
+  inset: -50%;
+  z-index: 60;
+  pointer-events: none;
+  opacity: 0.05;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  animation: grain 0.6s steps(4) infinite;
 }
 
-.quote {
-  margin: 0.5rem 0;
-  padding-left: 0.75rem;
-  border-left: 3px solid var(--accent);
-  font-style: italic;
+.fx-vignette {
+  position: fixed;
+  inset: 0;
+  z-index: 59;
+  pointer-events: none;
+  background: radial-gradient(
+    130% 120% at 50% 45%,
+    transparent 55%,
+    rgba(0, 0, 0, 0.55) 100%
+  );
 }
 
-.badge {
-  display: inline-block;
-  padding: 0.15rem 0.5rem;
+@keyframes grain {
+  0% { transform: translate(0, 0); }
+  25% { transform: translate(-3%, 2%); }
+  50% { transform: translate(2%, -4%); }
+  75% { transform: translate(-2%, -2%); }
+  100% { transform: translate(3%, 3%); }
+}
+
+/* ============================================================
+   Ornaments
+   ============================================================ */
+
+/* Double hairline rule with a star/dot in the middle */
+.rule-double {
+  border: 0;
+  height: 5px;
+  background:
+    linear-gradient(var(--color-line), var(--color-line)) center top / 100% 1px no-repeat,
+    linear-gradient(var(--color-line), var(--color-line)) center bottom / 100% 1px no-repeat;
+}
+
+/* 35mm sprocket-hole edge (decorative, top+bottom of a strip) */
+.film-perfs {
+  background-image: radial-gradient(
+    circle at center,
+    rgba(12, 10, 7, 0.9) 0 38%,
+    transparent 42%
+  );
+  background-size: 18px 14px;
+  background-repeat: repeat-x;
+}
+
+/* ============================================================
+   Lobby-card frame + ken-burns still
+   ============================================================ */
+
+.card-frame {
+  background: linear-gradient(180deg, var(--color-surface-2), var(--color-surface));
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-frame);
+  transition:
+    transform 0.5s var(--ease-reel),
+    box-shadow 0.5s var(--ease-reel),
+    border-color 0.5s var(--ease-reel);
+}
+
+.card-frame:hover {
+  transform: translateY(-3px);
+  border-color: color-mix(in oklab, var(--color-gold) 35%, var(--color-line));
+  box-shadow: var(--shadow-lift);
+}
+
+.still {
+  overflow: hidden;
+  background: #0a0805;
+  position: relative;
+}
+
+.still img {
+  transition: transform 1.2s var(--ease-reel), filter 0.6s var(--ease-reel);
+  filter: saturate(0.86) contrast(1.04) sepia(0.12);
+  will-change: transform;
+}
+
+.card-frame:hover .still img,
+.still-zoom:hover img {
+  transform: scale(1.07);
+  filter: saturate(1) contrast(1.06) sepia(0.04);
+}
+
+/* sepia/sunset wash on stills for cohesion */
+.still::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    transparent 40%,
+    rgba(12, 10, 7, 0.15) 75%,
+    rgba(12, 10, 7, 0.6) 100%
+  );
+  pointer-events: none;
+}
+
+/* ============================================================
+   Admission-ticket status chip (notched edges)
+   ============================================================ */
+
+.ticket {
+  --notch: 5px;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.22rem 0.6rem;
+  font-family: var(--font-display);
+  font-size: 0.66rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-weight: 600;
+  background: color-mix(in oklab, currentColor 12%, var(--color-ink));
+  color: var(--color-bone);
+  -webkit-mask:
+    radial-gradient(var(--notch) at 0 50%, transparent 98%, #000) left,
+    radial-gradient(var(--notch) at 100% 50%, transparent 98%, #000) right;
+  -webkit-mask-size: 51% 100%;
+  -webkit-mask-repeat: no-repeat;
+  mask:
+    radial-gradient(var(--notch) at 0 50%, transparent 98%, #000) left,
+    radial-gradient(var(--notch) at 100% 50%, transparent 98%, #000) right;
+  mask-size: 51% 100%;
+  mask-repeat: no-repeat;
+}
+
+.ticket .dot {
+  width: 6px;
+  height: 6px;
   border-radius: 999px;
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+  background: currentColor;
+  flex: none;
 }
 
-.badge.ready {
-  background: rgba(74, 222, 128, 0.15);
-  color: var(--ready);
+/* ============================================================
+   Projector "on air" pulse
+   ============================================================ */
+
+.proj-light {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--color-st-ready);
+  box-shadow: 0 0 0 0 color-mix(in oklab, var(--color-st-ready) 70%, transparent);
+  animation: proj-pulse 2.4s var(--ease-reel) infinite;
 }
 
-.badge.discovered,
-.badge.indexing {
-  background: rgba(96, 165, 250, 0.15);
-  color: var(--processing);
+@keyframes proj-pulse {
+  0% { box-shadow: 0 0 0 0 color-mix(in oklab, var(--color-st-ready) 60%, transparent); }
+  70% { box-shadow: 0 0 0 7px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
 }
 
-.badge.no_dialogue {
-  background: rgba(192, 132, 252, 0.15);
-  color: #c084fc;
+/* ============================================================
+   Skeleton — film-strip shimmer
+   ============================================================ */
+
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: var(--color-surface);
+}
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(241, 231, 212, 0.07),
+    transparent
+  );
+  animation: shimmer 1.5s var(--ease-reel) infinite;
 }
 
-.badge.failed {
-  background: rgba(248, 113, 113, 0.15);
-  color: var(--failed);
+@keyframes shimmer {
+  100% { transform: translateX(100%); }
 }
 
-.empty {
-  color: var(--muted);
-  padding: 1rem 0;
+/* ============================================================
+   Hero flicker (very subtle projector instability)
+   ============================================================ */
+
+@keyframes flicker {
+  0%, 100% { opacity: 1; }
+  92% { opacity: 1; }
+  93% { opacity: 0.86; }
+  94% { opacity: 1; }
+  96% { opacity: 0.93; }
+  97% { opacity: 1; }
+}
+
+.fx-flicker {
+  animation: flicker 6s linear infinite;
+}
+
+/* Entrance used as a fallback when motion is unavailable */
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ============================================================
+   Reduced motion
+   ============================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  .fx-grain {
+    animation: none;
+  }
+  .still img {
+    transition: none;
+  }
 }

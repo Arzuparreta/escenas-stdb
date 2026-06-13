@@ -5,9 +5,11 @@ venv/
 node_modules/
 .next/
 out/
+*.tsbuildinfo
 .env
 .env.local
 data/
 *.db
 *.db-*
 .DS_Store
+.gstack/
