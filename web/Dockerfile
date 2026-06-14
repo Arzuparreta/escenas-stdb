@@ -1,0 +1,34 @@
+FROM node:20-alpine AS dependencies
+
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci
+
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+ARG NEXT_PUBLIC_API_URL=/api
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+
+COPY --from=dependencies /app/node_modules ./node_modules
+COPY . .
+RUN mkdir -p public && npm run build
+
+FROM node:20-alpine AS runner
+
+ENV NODE_ENV=production \
+    HOSTNAME=0.0.0.0 \
+    PORT=6173
+
+WORKDIR /app
+RUN addgroup --system --gid 1001 nodejs \
+    && adduser --system --uid 1001 nextjs
+
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+USER nextjs
+EXPOSE 6173
+
+CMD ["node", "server.js"]

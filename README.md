@@ -68,6 +68,39 @@ Open http://localhost:6173
 
 The API embeds stdbKit's webhook server (port 8787) and playlist relay. Set `YOUTUBE_PLAYLIST_URL` in `.env` before starting.
 
+## Deploy with Docker Compose
+
+The production stack runs the Next.js frontend and FastAPI backend behind Caddy.
+Only ports 80 and 443 are public; API requests use the same-origin `/api` path.
+The SQLite catalog persists in `data/cinema.db`.
+
+On the server:
+
+```bash
+cp .env.example .env
+# Set YOUTUBE_PLAYLIST_URL and keep SITE_ADDRESS=:80 until DNS is ready.
+docker compose up -d --build
+docker compose ps
+curl http://127.0.0.1/api/health
+```
+
+Before replacing the database, stop the API and create a backup:
+
+```bash
+docker compose stop api
+cp data/cinema.db "data/cinema.db.backup.$(date +%s)"
+docker compose up -d api
+```
+
+After pointing the domain's `A` record to the server, set
+`SITE_ADDRESS=your-domain.example` in `.env` and reload Caddy:
+
+```bash
+docker compose up -d
+```
+
+Caddy will obtain and renew the HTTPS certificate automatically.
+
 ## Updating stdbKit
 
 When the library changes:
