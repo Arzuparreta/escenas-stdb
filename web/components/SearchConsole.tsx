@@ -5,13 +5,6 @@ import { FormEvent, useEffect, useRef, useState } from "react";
 import { QuotedHighlightInput } from "@/components/QuotedHighlightInput";
 import { SearchIcon } from "@/components/icons";
 
-const EXAMPLES: { q: string; label: string }[] = [
-  { q: '"I\'ll be back"', label: "“I'll be back”" },
-  { q: "El Padrino", label: "El Padrino" },
-  { q: "Coppola", label: "Coppola" },
-  { q: "no soy malo", label: "no soy malo" },
-];
-
 interface SearchConsoleProps {
   /** Search is smart by default; `exact` is derived from quotes, not a toggle. */
   onSearch: (query: string, exact: boolean) => void;
@@ -58,12 +51,6 @@ export function SearchConsole({ onSearch, loading }: SearchConsoleProps) {
     onSearch(text, exact);
   }
 
-  function runExample(example: (typeof EXAMPLES)[number]) {
-    setQuery(example.q);
-    const { text, exact } = parseQuery(example.q);
-    onSearch(text, exact);
-  }
-
   return (
     <form onSubmit={submit} className="w-full">
       {/* Search pill */}
@@ -87,21 +74,6 @@ export function SearchConsole({ onSearch, loading }: SearchConsoleProps) {
         >
           {loading ? "Buscando…" : "Buscar"}
         </button>
-      </div>
-
-      {/* Example chips */}
-      <div className="mt-5 flex flex-wrap items-center gap-2">
-        <span className="font-credit text-[0.56rem] text-faint">Prueba</span>
-        {EXAMPLES.map((example) => (
-          <button
-            key={example.label}
-            type="button"
-            onClick={() => runExample(example)}
-            className="rounded-full border border-line-soft bg-surface/50 px-3 py-1 text-xs text-bone-dim transition-colors duration-200 hover:border-gold/40 hover:text-gold-bright"
-          >
-            {example.label}
-          </button>
-        ))}
       </div>
     </form>
   );
