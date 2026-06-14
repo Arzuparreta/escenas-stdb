@@ -61,6 +61,10 @@ jobs:
             "$DEPLOY_USER@$DEPLOY_HOST" \
             "set -euo pipefail
              mkdir -p $deploy_path
+             find $deploy_path -mindepth 1 -maxdepth 1 \
+               ! -name .env \
+               ! -name data \
+               -exec rm -rf -- {} +
              tar -xzf - -C $deploy_path
              cd $deploy_path
              docker compose -f compose.production.yaml up -d --build --remove-orphans --wait --wait-timeout 180
