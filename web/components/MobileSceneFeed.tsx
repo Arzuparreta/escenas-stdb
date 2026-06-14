@@ -15,8 +15,6 @@ interface MobileSceneFeedProps {
   query: string;
 }
 
-const SOUND_KEY = "escenas-feed-sound";
-
 function playerCommand(
   frame: HTMLIFrameElement | null,
   command: "playVideo" | "pauseVideo" | "mute" | "unMute",
@@ -41,7 +39,6 @@ export function MobileSceneFeed({
   const [reducedMotion, setReducedMotion] = useState(false);
 
   useEffect(() => {
-    setSoundOn(window.localStorage.getItem(SOUND_KEY) === "on");
     const media = window.matchMedia("(prefers-reduced-motion: reduce)");
     const update = () => setReducedMotion(media.matches);
     update();
@@ -88,9 +85,7 @@ export function MobileSceneFeed({
   }, [activeIndex, reducedMotion, soundOn]);
 
   function toggleSound() {
-    const next = !soundOn;
-    setSoundOn(next);
-    window.localStorage.setItem(SOUND_KEY, next ? "on" : "off");
+    setSoundOn((current) => !current);
   }
 
   if (!loading && items.length === 0) {

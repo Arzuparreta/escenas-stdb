@@ -101,6 +101,6 @@ export function embedUrl(
     playsinline: options.inline === false ? "0" : "1",
     enablejsapi: "1",
   });
-  if (options.muted !== false) params.set("mute", "1");
+  if (options.muted === true) params.set("mute", "1");
   return `https://www.youtube-nocookie.com/embed/${youtubeId}?${params}`;
 }
