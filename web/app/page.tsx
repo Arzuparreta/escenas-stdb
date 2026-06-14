@@ -41,10 +41,11 @@ export default function HomePage() {
   const bootstrap = useCallback(async () => {
     setCatalogLoading(true);
     try {
-      const [, sceneList] = await Promise.all([getStatus(), listScenes()]);
+      const [, sceneList] = await Promise.all([getStatus(), listScenes(undefined, 12)]);
       setScenes(sceneList);
       setHealth("online");
-    } catch {
+    } catch (err) {
+      console.error("Bootstrap failed:", err);
       setHealth("offline");
     } finally {
       setCatalogLoading(false);
@@ -56,7 +57,7 @@ export default function HomePage() {
     bootstrap();
     const timer = setInterval(() => {
       // keep the catalog fresh without flipping the loading state
-      listScenes()
+      listScenes(undefined, 12)
         .then((list) => {
           setScenes(list);
           setHealth("online");

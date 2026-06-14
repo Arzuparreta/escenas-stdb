@@ -3,7 +3,10 @@ function apiBase(): string {
     return process.env.NEXT_PUBLIC_API_URL;
   }
   if (typeof window !== "undefined") {
-    return `http://${window.location.hostname}:8000`;
+    const { protocol, hostname } = window.location;
+    const url = `${protocol}//${hostname}:8000`;
+    console.log("API base URL:", url);
+    return url;
   }
   return "http://localhost:8000";
 }
@@ -62,9 +65,11 @@ export async function searchScenes(
   return data.results;
 }
 
-export async function listScenes(status?: string): Promise<Scene[]> {
-  const params = status ? `?status=${status}` : "";
-  const response = await fetch(`${apiBase()}/scenes${params}`);
+export async function listScenes(status?: string, limit = 12): Promise<Scene[]> {
+  const params = new URLSearchParams();
+  if (status) params.set("status", status);
+  params.set("limit", String(limit));
+  const response = await fetch(`${apiBase()}/scenes?${params}`);
   if (!response.ok) throw new Error("Failed to load scenes");
   return response.json();
 }

@@ -82,6 +82,12 @@ def _get_kit() -> StdbKit:
     return kit
 
 
+def _youtube_thumbnail(youtube_id: str, existing_url: str | None) -> str:
+    if existing_url:
+        return existing_url
+    return f"https://img.youtube.com/vi/{youtube_id}/hqdefault.jpg"
+
+
 def _scene_from_video(video) -> SceneResponse:
     meta = parse_film_title(video.title)
     return SceneResponse(
@@ -89,7 +95,7 @@ def _scene_from_video(video) -> SceneResponse:
         youtube_id=video.youtube_id,
         title=video.title,
         status=video.status.value,
-        thumbnail_url=video.thumbnail_url,
+        thumbnail_url=_youtube_thumbnail(video.youtube_id, video.thumbnail_url),
         film_title=meta.film_title,
         director=meta.director,
         year=meta.year,
@@ -155,7 +161,7 @@ def search(
                     context_before=result.context_before,
                     context_after=result.context_after,
                     start_sec=result.start_sec,
-                    thumbnail_url=result.thumbnail_url,
+                    thumbnail_url=_youtube_thumbnail(result.youtube_id, result.thumbnail_url),
                     youtube_url=result.youtube_url_with_timestamp,
                 )
             )
@@ -181,7 +187,7 @@ def search(
                     year=meta.year,
                     matched_text=meta.scene_label or video.title,
                     start_sec=0,
-                    thumbnail_url=video.thumbnail_url,
+                    thumbnail_url=_youtube_thumbnail(video.youtube_id, video.thumbnail_url),
                     youtube_url=f"https://www.youtube.com/watch?v={video.youtube_id}",
                 )
             )
