@@ -280,7 +280,7 @@ export default function HomePage() {
         />
       )}
 
-      <section className="relative hidden overflow-hidden md:block">
+      <section className="desktop-scene-hero relative hidden overflow-hidden md:block">
         <div
           aria-hidden="true"
           className="pointer-events-none absolute inset-0 bg-[radial-gradient(110%_70%_at_50%_-20%,rgba(189,95,53,0.22),transparent_60%),radial-gradient(80%_50%_at_70%_0%,rgba(230,180,80,0.14),transparent_55%)]"

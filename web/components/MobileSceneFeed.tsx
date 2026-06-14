@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 
 import { ExternalIcon, PlayIcon, QuoteGlyph } from "@/components/icons";
-import { embedUrl, type FeedItem } from "@/lib/api";
+import type { FeedItem } from "@/lib/api";
 import { creditLine, displayTitle } from "@/lib/format";
 
 interface MobileSceneFeedProps {
@@ -15,23 +15,176 @@ interface MobileSceneFeedProps {
   query: string;
 }
 
-function playerCommand(
-  frame: HTMLIFrameElement | null,
-  command: "playVideo" | "pauseVideo" | "mute" | "unMute",
-) {
-  frame?.contentWindow?.postMessage(
-    JSON.stringify({ event: "command", func: command, args: [] }),
-    "*",
-  );
+interface YouTubePlayer {
+  destroy: () => void;
+  getCurrentTime: () => number;
+  getPlayerState: () => number;
+  mute: () => void;
+  playVideo: () => void;
+  unMute: () => void;
 }
 
-function syncPlayer(
-  frame: HTMLIFrameElement | null,
-  soundOn: boolean,
-  autoplay: boolean,
-) {
-  playerCommand(frame, soundOn ? "unMute" : "mute");
-  if (autoplay) playerCommand(frame, "playVideo");
+interface YouTubePlayerConstructor {
+  new (
+    elementId: string,
+    options: {
+      host: string;
+      videoId: string;
+      width: string;
+      height: string;
+      playerVars: Record<string, number | string>;
+      events: {
+        onReady: (event: { target: YouTubePlayer }) => void;
+      };
+    },
+  ): YouTubePlayer;
+}
+
+type YouTubeWindow = Window & {
+  YT?: { Player: YouTubePlayerConstructor };
+  onYouTubeIframeAPIReady?: () => void;
+};
+
+let youtubeApiPromise: Promise<YouTubePlayerConstructor> | null = null;
+
+function loadYouTubeApi(): Promise<YouTubePlayerConstructor> {
+  if (youtubeApiPromise) return youtubeApiPromise;
+
+  youtubeApiPromise = new Promise((resolve, reject) => {
+    const youtubeWindow = window as YouTubeWindow;
+    if (youtubeWindow.YT?.Player) {
+      resolve(youtubeWindow.YT.Player);
+      return;
+    }
+
+    const previousReady = youtubeWindow.onYouTubeIframeAPIReady;
+    youtubeWindow.onYouTubeIframeAPIReady = () => {
+      previousReady?.();
+      if (youtubeWindow.YT?.Player) resolve(youtubeWindow.YT.Player);
+      else reject(new Error("YouTube iframe API loaded without YT.Player"));
+    };
+
+    const existingScript = document.querySelector<HTMLScriptElement>(
+      'script[src="https://www.youtube.com/iframe_api"]',
+    );
+    if (existingScript) return;
+
+    const script = document.createElement("script");
+    script.src = "https://www.youtube.com/iframe_api";
+    script.async = true;
+    script.onerror = () => reject(new Error("Failed to load YouTube iframe API"));
+    document.head.appendChild(script);
+  });
+
+  return youtubeApiPromise;
+}
+
+function MobileYouTubePlayer({
+  youtubeId,
+  startSec,
+  title,
+  soundOn,
+  autoplay,
+}: {
+  youtubeId: string;
+  startSec: number;
+  title: string;
+  soundOn: boolean;
+  autoplay: boolean;
+}) {
+  const reactId = useId();
+  const elementId = `mobile-youtube-${reactId.replaceAll(":", "")}`;
+  const playerRef = useRef<YouTubePlayer | null>(null);
+  const resumeSecRef = useRef(startSec);
+  const shouldPlayRef = useRef(autoplay);
+  const soundOnRef = useRef(soundOn);
+  const [inline, setInline] = useState(true);
+
+  useEffect(() => {
+    soundOnRef.current = soundOn;
+    const player = playerRef.current;
+    if (!player) return;
+    if (soundOn) player.unMute();
+    else player.mute();
+  }, [soundOn]);
+
+  useEffect(() => {
+    shouldPlayRef.current = autoplay;
+  }, [autoplay]);
+
+  useEffect(() => {
+    const landscapeQuery = window.matchMedia("(orientation: landscape)");
+
+    function handleOrientationChange() {
+      const player = playerRef.current;
+      if (player) {
+        const currentTime = player.getCurrentTime();
+        if (Number.isFinite(currentTime)) resumeSecRef.current = currentTime;
+        shouldPlayRef.current = [1, 3].includes(player.getPlayerState());
+      }
+      setInline(!landscapeQuery.matches);
+    }
+
+    handleOrientationChange();
+    landscapeQuery.addEventListener("change", handleOrientationChange);
+    return () =>
+      landscapeQuery.removeEventListener("change", handleOrientationChange);
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    let player: YouTubePlayer | null = null;
+
+    loadYouTubeApi()
+      .then((Player) => {
+        if (cancelled) return;
+        player = new Player(elementId, {
+          host: "https://www.youtube-nocookie.com",
+          videoId: youtubeId,
+          width: "100%",
+          height: "100%",
+          playerVars: {
+            autoplay: shouldPlayRef.current ? 1 : 0,
+            controls: 1,
+            enablejsapi: 1,
+            modestbranding: 1,
+            mute: 1,
+            origin: window.location.origin,
+            playsinline: inline ? 1 : 0,
+            rel: 0,
+            start: Math.max(0, Math.floor(resumeSecRef.current)),
+          },
+          events: {
+            onReady: ({ target }) => {
+              if (cancelled) return;
+              playerRef.current = target;
+              if (soundOnRef.current) target.unMute();
+              else target.mute();
+              if (shouldPlayRef.current) target.playVideo();
+              const iframe = document.getElementById(elementId);
+              iframe?.setAttribute("title", title);
+              iframe?.setAttribute(
+                "allow",
+                "autoplay; encrypted-media; fullscreen; picture-in-picture",
+              );
+              iframe?.setAttribute("allowfullscreen", "");
+            },
+          },
+        });
+        playerRef.current = player;
+      })
+      .catch(() => {
+        // Keep the player area empty if the external API cannot be loaded.
+      });
+
+    return () => {
+      cancelled = true;
+      if (playerRef.current === player) playerRef.current = null;
+      player?.destroy();
+    };
+  }, [elementId, inline, title, youtubeId]);
+
+  return <div id={elementId} className="h-full w-full" />;
 }
 
 export function MobileSceneFeed({
@@ -44,7 +197,6 @@ export function MobileSceneFeed({
 }: MobileSceneFeedProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef(new Map<number, HTMLElement>());
-  const activeFrameRef = useRef<HTMLIFrameElement | null>(null);
   const [soundOn, setSoundOn] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
 
@@ -84,48 +236,6 @@ export function MobileSceneFeed({
     if (!root || !element) return;
     root.scrollTo({ top: element.offsetTop, behavior: "auto" });
   }, [activeIndex, items.length, query]);
-
-  useEffect(() => {
-    const frame = cardRefs.current
-      .get(activeIndex)
-      ?.querySelector<HTMLIFrameElement>("iframe") ?? null;
-    activeFrameRef.current = frame;
-    syncPlayer(frame, soundOn, !reducedMotion);
-  }, [activeIndex, reducedMotion, soundOn]);
-
-  useEffect(() => {
-    function onPlayerMessage(event: MessageEvent) {
-      const frame = activeFrameRef.current;
-      if (!frame || event.source !== frame.contentWindow) return;
-      try {
-        const message =
-          typeof event.data === "string" ? JSON.parse(event.data) : event.data;
-        if (message?.event !== "onReady") return;
-        syncPlayer(frame, soundOn, !reducedMotion);
-      } catch {
-        // Ignore unrelated postMessage traffic.
-      }
-    }
-    window.addEventListener("message", onPlayerMessage);
-    return () => window.removeEventListener("message", onPlayerMessage);
-  }, [reducedMotion, soundOn]);
-
-  function handlePlayerLoad(frame: HTMLIFrameElement) {
-    activeFrameRef.current = frame;
-    frame.contentWindow?.postMessage(
-      JSON.stringify({ event: "listening", id: frame.id }),
-      "*",
-    );
-    syncPlayer(frame, soundOn, !reducedMotion);
-    window.setTimeout(
-      () => {
-        if (frame === activeFrameRef.current) {
-          syncPlayer(frame, soundOn, !reducedMotion);
-        }
-      },
-      250,
-    );
-  }
 
   function toggleSound() {
     setSoundOn((current) => !current);
@@ -173,18 +283,12 @@ export function MobileSceneFeed({
           <div className="relative overflow-hidden rounded-2xl border border-bone/10 bg-black shadow-lift">
             <div className="aspect-video">
               {index === activeIndex ? (
-                <iframe
-                  id={`mobile-player-${index}`}
-                  src={embedUrl(item.youtube_id, item.playback_start_sec, {
-                    autoplay: !reducedMotion,
-                    muted: true,
-                    inline: true,
-                  })}
-                  onLoad={(event) => handlePlayerLoad(event.currentTarget)}
+                <MobileYouTubePlayer
+                  youtubeId={item.youtube_id}
+                  startSec={item.playback_start_sec}
                   title={displayTitle(item)}
-                  allow="autoplay; encrypted-media; picture-in-picture"
-                  allowFullScreen
-                  className="h-full w-full"
+                  soundOn={soundOn}
+                  autoplay={!reducedMotion}
                 />
               ) : item.thumbnail_url ? (
                 // eslint-disable-next-line @next/next/no-img-element
