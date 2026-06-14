@@ -25,6 +25,15 @@ function playerCommand(
   );
 }
 
+function syncPlayer(
+  frame: HTMLIFrameElement | null,
+  soundOn: boolean,
+  autoplay: boolean,
+) {
+  playerCommand(frame, soundOn ? "unMute" : "mute");
+  if (autoplay) playerCommand(frame, "playVideo");
+}
+
 export function MobileSceneFeed({
   items,
   activeIndex,
@@ -35,6 +44,7 @@ export function MobileSceneFeed({
 }: MobileSceneFeedProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef(new Map<number, HTMLElement>());
+  const activeFrameRef = useRef<HTMLIFrameElement | null>(null);
   const [soundOn, setSoundOn] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
 
@@ -76,13 +86,46 @@ export function MobileSceneFeed({
   }, [activeIndex, items.length, query]);
 
   useEffect(() => {
-    if (reducedMotion) return;
     const frame = cardRefs.current
       .get(activeIndex)
       ?.querySelector<HTMLIFrameElement>("iframe") ?? null;
-    playerCommand(frame, soundOn ? "unMute" : "mute");
-    playerCommand(frame, "playVideo");
+    activeFrameRef.current = frame;
+    syncPlayer(frame, soundOn, !reducedMotion);
   }, [activeIndex, reducedMotion, soundOn]);
+
+  useEffect(() => {
+    function onPlayerMessage(event: MessageEvent) {
+      const frame = activeFrameRef.current;
+      if (!frame || event.source !== frame.contentWindow) return;
+      try {
+        const message =
+          typeof event.data === "string" ? JSON.parse(event.data) : event.data;
+        if (message?.event !== "onReady") return;
+        syncPlayer(frame, soundOn, !reducedMotion);
+      } catch {
+        // Ignore unrelated postMessage traffic.
+      }
+    }
+    window.addEventListener("message", onPlayerMessage);
+    return () => window.removeEventListener("message", onPlayerMessage);
+  }, [reducedMotion, soundOn]);
+
+  function handlePlayerLoad(frame: HTMLIFrameElement) {
+    activeFrameRef.current = frame;
+    frame.contentWindow?.postMessage(
+      JSON.stringify({ event: "listening", id: frame.id }),
+      "*",
+    );
+    syncPlayer(frame, soundOn, !reducedMotion);
+    window.setTimeout(
+      () => {
+        if (frame === activeFrameRef.current) {
+          syncPlayer(frame, soundOn, !reducedMotion);
+        }
+      },
+      250,
+    );
+  }
 
   function toggleSound() {
     setSoundOn((current) => !current);
@@ -131,11 +174,13 @@ export function MobileSceneFeed({
             <div className="aspect-video">
               {index === activeIndex ? (
                 <iframe
+                  id={`mobile-player-${index}`}
                   src={embedUrl(item.youtube_id, item.playback_start_sec, {
                     autoplay: !reducedMotion,
                     muted: true,
                     inline: true,
                   })}
+                  onLoad={(event) => handlePlayerLoad(event.currentTarget)}
                   title={displayTitle(item)}
                   allow="autoplay; encrypted-media; picture-in-picture"
                   allowFullScreen
