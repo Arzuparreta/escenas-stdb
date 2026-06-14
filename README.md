@@ -101,6 +101,29 @@ docker compose up -d
 
 Caddy will obtain and renew the HTTPS certificate automatically.
 
+## Automatic deployment from GitHub
+
+The `Deploy` GitHub Actions workflow redeploys production after every push to
+`main`. It connects to the production server over SSH, fast-forwards its clone
+to the current `main`, rebuilds the containers, waits for them to become
+healthy, and checks `http://127.0.0.1/api/health`.
+
+The server must have this repository cloned, a configured `.env`, Docker with
+the Compose plugin, and an SSH user with permission to run Docker. Add these
+repository secrets under **Settings → Secrets and variables → Actions**:
+
+- `DEPLOY_HOST`: server hostname or IP address.
+- `DEPLOY_USER`: SSH user on the server.
+- `DEPLOY_PORT`: SSH port; use `22` unless it was changed.
+- `DEPLOY_PATH`: absolute path of the repository clone on the server.
+- `DEPLOY_SSH_KEY`: private SSH key authorized for `DEPLOY_USER`.
+- `DEPLOY_KNOWN_HOSTS`: trusted server host key, generated from a trusted
+  machine with `ssh-keyscan -H -p 22 your-server`.
+
+The production `.env` and `data/cinema.db` remain on the server and are not
+replaced by the deployment. A deployment can also be started manually from
+**Actions → Deploy → Run workflow**.
+
 ## Updating stdbKit
 
 When the library changes:
