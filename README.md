@@ -104,13 +104,16 @@ Caddy will obtain and renew the HTTPS certificate automatically.
 ## Automatic deployment from GitHub
 
 The `Deploy` GitHub Actions workflow redeploys production after every push to
-`main`. It connects to the production server over SSH, fast-forwards its clone
-to the current `main`, rebuilds the containers, waits for them to become
-healthy, and checks `http://127.0.0.1/api/health`.
+`main`. It sends the current commit to the production server over SSH, rebuilds
+the containers, waits for them to become healthy, and checks
+`http://127.0.0.1/api/health`.
 
-The server must have this repository cloned, a configured `.env`, Docker with
-the Compose plugin, and an SSH user with permission to run Docker. Add these
-repository secrets under **Settings → Secrets and variables → Actions**:
+The server must have a configured `.env`, Docker with the Compose plugin, Nginx
+proxying `/` to `127.0.0.1:16173` and `/api/` to `127.0.0.1:18000`, and an SSH
+user with permission to run Docker. The workflow uses
+`compose.production.yaml`; it does not replace the host's Nginx configuration.
+Add these repository secrets under **Settings → Secrets and variables →
+Actions**:
 
 - `DEPLOY_HOST`: server hostname or IP address.
 - `DEPLOY_USER`: SSH user on the server.

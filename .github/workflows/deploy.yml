@@ -21,6 +21,9 @@ jobs:
     timeout-minutes: 15
 
     steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
       - name: Configure SSH
         env:
           DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
@@ -42,21 +45,23 @@ jobs:
         run: |
           set -euo pipefail
           port="${DEPLOY_PORT:-22}"
+          printf -v deploy_path '%q' "$DEPLOY_PATH"
 
+          tar \
+            --exclude=.git \
+            --exclude=.env \
+            --exclude=data \
+            -czf - \
+            . |
           ssh \
             -i ~/.ssh/deploy_key \
             -p "$port" \
             -o BatchMode=yes \
             -o StrictHostKeyChecking=yes \
             "$DEPLOY_USER@$DEPLOY_HOST" \
-            "bash -s -- '$DEPLOY_PATH'" <<'REMOTE'
-          set -euo pipefail
-          deploy_path="$1"
-
-          cd "$deploy_path"
-          git fetch origin main
-          git switch main
-          git merge --ff-only origin/main
-          docker compose up -d --build --remove-orphans --wait --wait-timeout 180
-          curl --fail --silent --show-error http://127.0.0.1/api/health
-          REMOTE
+            "set -euo pipefail
+             mkdir -p $deploy_path
+             tar -xzf - -C $deploy_path
+             cd $deploy_path
+             docker compose -f compose.production.yaml up -d --build --remove-orphans --wait --wait-timeout 180
+             curl --fail --silent --show-error http://127.0.0.1:18000/health"

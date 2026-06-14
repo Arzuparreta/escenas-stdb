@@ -1,0 +1,43 @@
+services:
+  api:
+    build:
+      context: ./backend
+    container_name: escenas-stdb-api
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      STDBKIT_DB_PATH: /data/cinema.db
+      WEBHOOK_HOST: 127.0.0.1
+      API_HOST: 0.0.0.0
+      API_PORT: 8000
+      CORS_ORIGINS: ${CORS_ORIGINS:-*}
+    ports:
+      - "127.0.0.1:18000:8000"
+    volumes:
+      - ./data:/data
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  web:
+    build:
+      context: ./web
+      args:
+        NEXT_PUBLIC_API_URL: /api
+    container_name: escenas-stdb-web
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:16173:6173"
