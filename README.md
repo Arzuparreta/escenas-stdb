@@ -9,7 +9,8 @@ This repo **consumes** [stdbKit](https://github.com/Arzuparreta/stdbKit) as an e
 1. Your uncle adds scenes to a YouTube playlist (only curation step).
 2. The API starts stdbKit's relay in the background.
 3. Relay detects playlist changes → webhooks → subtitle indexing.
-4. This web UI searches scenes by **phrase**, **film**, or **director**.
+4. The web UI exposes one continuous scene feed that can also be searched by
+   **phrase**, **film**, or **director**.
 
 Film metadata is parsed from YouTube titles using this convention:
 
@@ -137,12 +138,28 @@ source .venv/bin/activate
 pip install --upgrade --force-reinstall "stdbkit @ git+https://github.com/Arzuparreta/stdbKit.git"
 ```
 
+## Feed behavior
+
+- Mobile uses a vertical, full-viewport scene feed with muted inline playback.
+- Desktop keeps the cinematic landing page and progressively loads the full
+  catalog as the user scrolls.
+- Search updates the same feed while typing. Phrase matches start playback at
+  the matching subtitle timestamp; film and director matches start at the
+  beginning.
+- Discovery uses a stable shuffled order per session and paginates without
+  repeating a scene until the catalog has been exhausted.
+
 ## API endpoints
 
 - `GET /health`
 - `GET /status`
-- `GET /scenes?status=ready`
-- `GET /search?q=...&mode=phrase|film|director|all`
+- `GET /feed?seed=...&cursor=...&limit=12`
+- `GET /feed?q=...&exact=false&cursor=...&limit=12`
+
+`/feed` is the single public content endpoint. Without `q` it returns discovery
+items in a deterministic shuffled order. With `q` it combines metadata and
+subtitle search, deduplicates results by scene, and includes an optional
+highlight plus `playback_start_sec`.
 
 ## Project layout
 

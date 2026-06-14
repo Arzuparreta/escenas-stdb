@@ -86,6 +86,12 @@ body {
   min-height: 100dvh;
 }
 
+@media (max-width: 767px) {
+  body {
+    overflow: hidden;
+  }
+}
+
 /* Fixed warm glow behind everything. A dedicated layer (rather than
    background-attachment: fixed on body) avoids iOS Safari scroll jank. */
 .fx-backdrop {
@@ -410,5 +416,8 @@ input {
   }
   .still img {
     transition: none;
+  }
+  .mobile-scene-feed {
+    scroll-snap-type: none;
   }
 }

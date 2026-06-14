@@ -1,4 +1,4 @@
-import type { Scene, SearchHit } from "@/lib/api";
+import type { FeedItem } from "@/lib/api";
 
 export type StatusTone = "ready" | "processing" | "quiet" | "failed" | "neutral";
 
@@ -78,7 +78,7 @@ export function relativeTime(iso: string | null): string | null {
 }
 
 /** "Dirigida por X · 1972" credit line, gracefully degrading. */
-export function creditLine(item: Scene | SearchHit): string | null {
+export function creditLine(item: FeedItem): string | null {
   const parts: string[] = [];
   if (item.director) parts.push(`Dirigida por ${item.director}`);
   if (item.year) parts.push(String(item.year));
@@ -86,6 +86,6 @@ export function creditLine(item: Scene | SearchHit): string | null {
 }
 
 /** Best display title for a scene/hit. */
-export function displayTitle(item: Scene | SearchHit): string {
+export function displayTitle(item: FeedItem): string {
   return item.film_title ?? item.title;
 }

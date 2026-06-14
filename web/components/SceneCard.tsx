@@ -3,14 +3,11 @@
 import { motion } from "motion/react";
 
 import { Still } from "@/components/Still";
-import { StatusTicket } from "@/components/StatusTicket";
 
 interface SceneCardProps {
   title: string;
   credit: string | null;
   thumbnailUrl: string | null;
-  /** When present, renders a status ticket chip. */
-  status?: string;
   /** Small credit-style label above the title (e.g. "Película"). */
   kicker?: string;
   sceneLabel?: string | null;
@@ -24,7 +21,6 @@ export function SceneCard({
   title,
   credit,
   thumbnailUrl,
-  status,
   kicker,
   sceneLabel,
   relTime,
@@ -46,9 +42,7 @@ export function SceneCard({
 
       <div className="flex flex-1 flex-col gap-1.5 p-4">
         <div className="mb-0.5 flex items-center justify-between gap-2">
-          {status ? (
-            <StatusTicket status={status} />
-          ) : kicker ? (
+          {kicker ? (
             <span className="font-credit text-[0.56rem] text-gold-deep">
               {kicker}
             </span>

@@ -11,24 +11,15 @@ function apiBase(): string {
   return "http://localhost:8000";
 }
 
-export type SearchMode = "phrase" | "film" | "director" | "all";
+export type FeedMode = "discover" | "search";
 
-export interface SearchHit {
-  video_id: string;
-  youtube_id: string;
-  title: string;
-  film_title: string | null;
-  director: string | null;
-  year: number | null;
-  matched_text: string;
-  context_before: string;
-  context_after: string;
-  start_sec: number;
-  thumbnail_url: string | null;
-  youtube_url: string;
+export interface FeedHighlight {
+  before: string;
+  match: string;
+  after: string;
 }
 
-export interface Scene {
+export interface FeedItem {
   video_id: string;
   youtube_id: string;
   title: string;
@@ -40,6 +31,17 @@ export interface Scene {
   scene_label: string | null;
   youtube_url: string;
   indexed_at: string | null;
+  playback_start_sec: number;
+  playback_end_sec: number | null;
+  highlight: FeedHighlight | null;
+}
+
+export interface FeedResponse {
+  mode: FeedMode;
+  seed: string;
+  items: FeedItem[];
+  next_cursor: string | null;
+  total: number;
 }
 
 export interface StatusSummary {
@@ -53,24 +55,28 @@ export interface StatusSummary {
   watched_playlists: number;
 }
 
-export async function searchScenes(
-  query: string,
-  mode: SearchMode,
+export async function getFeed({
+  query = "",
+  seed,
+  cursor,
+  limit = 12,
   exact = false,
-): Promise<SearchHit[]> {
-  const params = new URLSearchParams({ q: query, mode, exact: String(exact) });
-  const response = await fetch(`${apiBase()}/search?${params}`);
-  if (!response.ok) throw new Error("Search failed");
-  const data = await response.json();
-  return data.results;
-}
-
-export async function listScenes(status?: string, limit = 12): Promise<Scene[]> {
-  const params = new URLSearchParams();
-  if (status) params.set("status", status);
+  signal,
+}: {
+  query?: string;
+  seed?: string;
+  cursor?: string | null;
+  limit?: number;
+  exact?: boolean;
+  signal?: AbortSignal;
+} = {}): Promise<FeedResponse> {
+  const params = new URLSearchParams({ exact: String(exact) });
+  if (query) params.set("q", query);
+  if (seed) params.set("seed", seed);
+  if (cursor) params.set("cursor", cursor);
   params.set("limit", String(limit));
-  const response = await fetch(`${apiBase()}/scenes?${params}`);
-  if (!response.ok) throw new Error("Failed to load scenes");
+  const response = await fetch(`${apiBase()}/feed?${params}`, { signal });
+  if (!response.ok) throw new Error("Failed to load feed");
   return response.json();
 }
 
@@ -81,13 +87,20 @@ export async function getStatus(): Promise<StatusSummary> {
 }
 
 /** YouTube no-cookie embed URL starting at the given second. */
-export function embedUrl(youtubeId: string, startSec = 0): string {
+export function embedUrl(
+  youtubeId: string,
+  startSec = 0,
+  options: { autoplay?: boolean; muted?: boolean; inline?: boolean } = {},
+): string {
   const start = Math.max(0, Math.floor(startSec));
   const params = new URLSearchParams({
     start: String(start),
-    autoplay: "1",
+    autoplay: options.autoplay === false ? "0" : "1",
     rel: "0",
     modestbranding: "1",
+    playsinline: options.inline === false ? "0" : "1",
+    enablejsapi: "1",
   });
+  if (options.muted !== false) params.set("mute", "1");
   return `https://www.youtube-nocookie.com/embed/${youtubeId}?${params}`;
 }

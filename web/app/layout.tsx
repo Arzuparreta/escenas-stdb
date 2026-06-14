@@ -29,7 +29,7 @@ const rye = Rye({
 export const metadata: Metadata = {
   title: "Escenas — El Archivo de cine",
   description:
-    "Un archivo de cine curado a mano. Busca escenas por frase, película o director.",
+    "Un archivo de cine curado a mano. Busca y explora escenas, frase a frase.",
 };
 
 export const viewport: Viewport = {

@@ -3,18 +3,16 @@ from __future__ import annotations
 import logging
 import threading
 from contextlib import asynccontextmanager
-from typing import Literal
 
 import uvicorn
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from stdbkit import StdbKit
-from stdbkit.types import VideoStatus
 from stdbkit.webhooks.server import create_webhook_app
 
 from app.config import settings
-from app.film_parser import parse_film_title
-from app.schemas import SceneResponse, SearchHitResponse, SearchResponse, StatusResponse
+from app.feed import build_feed
+from app.schemas import FeedResponse, StatusResponse
 
 logger = logging.getLogger(__name__)
 kit: StdbKit | None = None
@@ -82,29 +80,6 @@ def _get_kit() -> StdbKit:
     return kit
 
 
-def _youtube_thumbnail(youtube_id: str, existing_url: str | None) -> str:
-    if existing_url:
-        return existing_url
-    return f"https://img.youtube.com/vi/{youtube_id}/hqdefault.jpg"
-
-
-def _scene_from_video(video) -> SceneResponse:
-    meta = parse_film_title(video.title)
-    return SceneResponse(
-        video_id=video.id,
-        youtube_id=video.youtube_id,
-        title=video.title,
-        status=video.status.value,
-        thumbnail_url=_youtube_thumbnail(video.youtube_id, video.thumbnail_url),
-        film_title=meta.film_title,
-        director=meta.director,
-        year=meta.year,
-        scene_label=meta.scene_label,
-        youtube_url=f"https://www.youtube.com/watch?v={video.youtube_id}",
-        indexed_at=video.indexed_at,
-    )
-
-
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
@@ -125,73 +100,22 @@ def status() -> StatusResponse:
     )
 
 
-@app.get("/scenes", response_model=list[SceneResponse])
-def list_scenes(
-    status_filter: str | None = Query(default=None, alias="status"),
-    limit: int = Query(default=50, ge=1, le=200),
-) -> list[SceneResponse]:
-    video_status = VideoStatus(status_filter) if status_filter else None
-    videos = _get_kit().list_videos(status=video_status, limit=limit)
-    return [_scene_from_video(video) for video in videos]
-
-
-@app.get("/search", response_model=SearchResponse)
-def search(
-    q: str = Query(min_length=1),
-    mode: Literal["phrase", "film", "director", "all"] = "all",
-    limit: int = Query(default=20, ge=1, le=100),
+@app.get("/feed", response_model=FeedResponse)
+def feed(
+    q: str = "",
+    seed: str | None = None,
+    cursor: str | None = None,
+    limit: int = Query(default=12, ge=1, le=50),
     exact: bool = False,
-) -> SearchResponse:
-    current_kit = _get_kit()
-    hits: list[SearchHitResponse] = []
-    query_lower = q.lower()
-
-    if mode in ("phrase", "all"):
-        for result in current_kit.search_phrase(q, limit=limit, exact=exact):
-            meta = parse_film_title(result.title)
-            hits.append(
-                SearchHitResponse(
-                    video_id=result.video_id,
-                    youtube_id=result.youtube_id,
-                    title=result.title,
-                    film_title=meta.film_title,
-                    director=meta.director,
-                    year=meta.year,
-                    matched_text=result.matched_text,
-                    context_before=result.context_before,
-                    context_after=result.context_after,
-                    start_sec=result.start_sec,
-                    thumbnail_url=_youtube_thumbnail(result.youtube_id, result.thumbnail_url),
-                    youtube_url=result.youtube_url_with_timestamp,
-                )
-            )
-
-    if mode in ("film", "director", "all"):
-        for video in current_kit.list_catalog_videos(limit=500):
-            meta = parse_film_title(video.title)
-            film_match = mode in ("film", "all") and meta.film_title and query_lower in meta.film_title.lower()
-            director_match = (
-                mode in ("director", "all") and meta.director and query_lower in meta.director.lower()
-            )
-            if not (film_match or director_match):
-                continue
-            if any(hit.video_id == video.id for hit in hits):
-                continue
-            hits.append(
-                SearchHitResponse(
-                    video_id=video.id,
-                    youtube_id=video.youtube_id,
-                    title=video.title,
-                    film_title=meta.film_title,
-                    director=meta.director,
-                    year=meta.year,
-                    matched_text=meta.scene_label or video.title,
-                    start_sec=0,
-                    thumbnail_url=_youtube_thumbnail(video.youtube_id, video.thumbnail_url),
-                    youtube_url=f"https://www.youtube.com/watch?v={video.youtube_id}",
-                )
-            )
-            if len(hits) >= limit:
-                break
-
-    return SearchResponse(mode=mode, query=q, results=hits[:limit])
+) -> FeedResponse:
+    try:
+        return build_feed(
+            _get_kit(),
+            query=q,
+            seed=seed,
+            cursor_value=cursor,
+            limit=limit,
+            exact=exact,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc

@@ -6,7 +6,7 @@ import { ReelMark } from "@/components/icons";
 /** Sticky top bar styled like a cinema marquee / frontier sign. */
 export function MarqueeHeader() {
   return (
-    <header className="sticky top-0 z-50 border-b border-line-soft bg-ink/72 backdrop-blur-md">
+    <header className="sticky top-0 z-50 hidden border-b border-line-soft bg-ink/72 backdrop-blur-md md:block">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-5">
         <Link
           href="/"

@@ -3,7 +3,7 @@ import { StarGlyph } from "@/components/icons";
 /** End-credits style footer. */
 export function CreditsFooter() {
   return (
-    <footer className="relative z-10 mt-24 border-t border-line-soft">
+    <footer className="relative z-10 mt-24 hidden border-t border-line-soft md:block">
       <div className="mx-auto flex max-w-5xl flex-col items-center gap-4 px-5 py-12 text-center">
         <div className="flex items-center gap-3 text-faint">
           <span className="h-px w-10 bg-line" />
