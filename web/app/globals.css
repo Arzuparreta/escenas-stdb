@@ -92,17 +92,6 @@ body {
   }
 }
 
-@media (orientation: landscape) and (hover: none) and (pointer: coarse) {
-  .mobile-scene-feed {
-    display: block !important;
-  }
-
-  .desktop-scene-hero,
-  .desktop-scene-grid {
-    display: none !important;
-  }
-}
-
 /* Fixed warm glow behind everything. A dedicated layer (rather than
    background-attachment: fixed on body) avoids iOS Safari scroll jank. */
 .fx-backdrop {

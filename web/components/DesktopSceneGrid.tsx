@@ -41,7 +41,7 @@ export function DesktopSceneGrid({
   }, [hasMore, onLoadMore]);
 
   return (
-    <section className="desktop-scene-grid mx-auto mt-20 hidden max-w-6xl px-5 md:block">
+    <section className="mx-auto mt-20 hidden max-w-6xl px-5 md:block">
       <SectionTitle
         title={query ? "Resultados" : "Explora el archivo"}
         meta={
