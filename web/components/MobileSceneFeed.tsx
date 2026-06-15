@@ -160,7 +160,7 @@ export function MobileSceneFeed({
       observer.disconnect();
       window.removeEventListener("resize", positionPlayer);
     };
-  }, [activeIndex, items.length, query]);
+  }, [activeIndex, initialPlayerItem, items.length, query]);
 
   useEffect(() => {
     const frame = activeFrameRef.current;
