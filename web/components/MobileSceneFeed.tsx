@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { ExternalIcon, PlayIcon, QuoteGlyph } from "@/components/icons";
 import { embedUrl, type FeedItem } from "@/lib/api";
@@ -17,11 +17,36 @@ interface MobileSceneFeedProps {
 
 function playerCommand(
   frame: HTMLIFrameElement | null,
-  command: "playVideo" | "pauseVideo" | "mute" | "unMute",
+  command:
+    | "playVideo"
+    | "pauseVideo"
+    | "mute"
+    | "unMute"
+    | "loadVideoById"
+    | "cueVideoById",
+  args: unknown[] = [],
 ) {
   frame?.contentWindow?.postMessage(
-    JSON.stringify({ event: "command", func: command, args: [] }),
+    JSON.stringify({ event: "command", func: command, args }),
     "*",
+  );
+}
+
+function sceneKey(item: FeedItem) {
+  return `${item.youtube_id}:${item.playback_start_sec}`;
+}
+
+function loadScene(
+  frame: HTMLIFrameElement | null,
+  item: FeedItem,
+  soundOn: boolean,
+  autoplay: boolean,
+) {
+  playerCommand(frame, soundOn ? "unMute" : "mute");
+  playerCommand(
+    frame,
+    autoplay ? "loadVideoById" : "cueVideoById",
+    [{ videoId: item.youtube_id, startSeconds: item.playback_start_sec }],
   );
 }
 
@@ -52,9 +77,24 @@ export function MobileSceneFeed({
 }: MobileSceneFeedProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef(new Map<number, HTMLElement>());
+  const playerSlotRefs = useRef(new Map<number, HTMLDivElement>());
+  const playerLayerRef = useRef<HTMLDivElement>(null);
   const activeFrameRef = useRef<HTMLIFrameElement | null>(null);
+  const activeItemRef = useRef<FeedItem | null>(null);
+  const loadedSceneKeyRef = useRef<string | null>(null);
+  const playerReadyRef = useRef(false);
+  const [initialPlayerItem, setInitialPlayerItem] = useState<FeedItem | null>(
+    null,
+  );
   const [soundOn, setSoundOn] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
+  activeItemRef.current = items[activeIndex] ?? null;
+
+  useEffect(() => {
+    if (!initialPlayerItem && activeItemRef.current) {
+      setInitialPlayerItem(activeItemRef.current);
+    }
+  }, [activeIndex, initialPlayerItem, items]);
 
   useEffect(() => {
     const media = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -93,13 +133,49 @@ export function MobileSceneFeed({
     root.scrollTo({ top: element.offsetTop, behavior: "auto" });
   }, [activeIndex, items.length, query]);
 
+  useLayoutEffect(() => {
+    const root = containerRef.current;
+    const slot = playerSlotRefs.current.get(activeIndex);
+    const layer = playerLayerRef.current;
+    if (!root || !slot || !layer) {
+      if (layer) layer.style.display = "none";
+      return;
+    }
+
+    const positionPlayer = () => {
+      const rootRect = root.getBoundingClientRect();
+      const slotRect = slot.getBoundingClientRect();
+      layer.style.display = "block";
+      layer.style.top = `${slotRect.top - rootRect.top + root.scrollTop}px`;
+      layer.style.left = `${slotRect.left - rootRect.left + root.scrollLeft}px`;
+      layer.style.width = `${slotRect.width}px`;
+      layer.style.height = `${slotRect.height}px`;
+    };
+
+    positionPlayer();
+    const observer = new ResizeObserver(positionPlayer);
+    observer.observe(slot);
+    window.addEventListener("resize", positionPlayer);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", positionPlayer);
+    };
+  }, [activeIndex, items.length, query]);
+
   useEffect(() => {
-    const frame = cardRefs.current
-      .get(activeIndex)
-      ?.querySelector<HTMLIFrameElement>("iframe") ?? null;
-    activeFrameRef.current = frame;
-    syncPlayer(frame, soundOn, !reducedMotion);
-  }, [activeIndex, reducedMotion, soundOn]);
+    const frame = activeFrameRef.current;
+    const item = activeItemRef.current;
+    if (!frame || !item || !playerReadyRef.current) return;
+
+    const key = sceneKey(item);
+    if (loadedSceneKeyRef.current === key) {
+      syncPlayer(frame, soundOn, !reducedMotion);
+      return;
+    }
+
+    loadedSceneKeyRef.current = key;
+    loadScene(frame, item, soundOn, !reducedMotion);
+  }, [activeIndex, items, reducedMotion, soundOn]);
 
   useEffect(() => {
     function onPlayerMessage(event: MessageEvent) {
@@ -109,7 +185,16 @@ export function MobileSceneFeed({
         const message =
           typeof event.data === "string" ? JSON.parse(event.data) : event.data;
         if (message?.event !== "onReady") return;
-        syncPlayer(frame, soundOn, !reducedMotion);
+        playerReadyRef.current = true;
+        const item = activeItemRef.current;
+        if (!item) return;
+        const key = sceneKey(item);
+        if (loadedSceneKeyRef.current === key) {
+          syncPlayer(frame, soundOn, !reducedMotion);
+        } else {
+          loadedSceneKeyRef.current = key;
+          loadScene(frame, item, soundOn, !reducedMotion);
+        }
       } catch {
         // Ignore unrelated postMessage traffic.
       }
@@ -118,8 +203,13 @@ export function MobileSceneFeed({
     return () => window.removeEventListener("message", onPlayerMessage);
   }, [reducedMotion, soundOn]);
 
-  function handlePlayerLoad(frame: HTMLIFrameElement) {
+  function handlePlayerLoad(
+    frame: HTMLIFrameElement,
+    initialItem: FeedItem,
+  ) {
     activeFrameRef.current = frame;
+    playerReadyRef.current = false;
+    loadedSceneKeyRef.current = sceneKey(initialItem);
     frame.contentWindow?.postMessage(
       JSON.stringify({ event: "listening", id: frame.id }),
       "*",
@@ -159,8 +249,38 @@ export function MobileSceneFeed({
   return (
     <div
       ref={containerRef}
-      className="mobile-scene-feed h-dvh snap-y snap-mandatory overflow-y-auto overscroll-y-contain md:hidden"
+      className="mobile-scene-feed relative h-dvh snap-y snap-mandatory overflow-y-auto overscroll-y-contain md:hidden"
     >
+      {initialPlayerItem ? (
+        <div
+          ref={playerLayerRef}
+          className="pointer-events-auto absolute z-20 hidden overflow-hidden rounded-2xl bg-black"
+        >
+          <iframe
+            id="mobile-player"
+            src={embedUrl(
+              initialPlayerItem.youtube_id,
+              initialPlayerItem.playback_start_sec,
+              {
+                autoplay: !reducedMotion,
+                muted: true,
+                inline: true,
+              },
+            )}
+            onLoad={(event) =>
+              handlePlayerLoad(event.currentTarget, initialPlayerItem)
+            }
+            title={
+              activeItemRef.current
+                ? displayTitle(activeItemRef.current)
+                : displayTitle(initialPlayerItem)
+            }
+            allow="autoplay; encrypted-media; picture-in-picture"
+            allowFullScreen
+            className="h-full w-full"
+          />
+        </div>
+      ) : null}
       {items.map((item, index) => (
         <article
           key={`${item.video_id}-${item.playback_start_sec}-${index}`}
@@ -180,23 +300,15 @@ export function MobileSceneFeed({
           ) : null}
           <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(12,10,7,.8),rgba(12,10,7,.18)_32%,rgba(12,10,7,.3)_65%,rgba(12,10,7,.96))]" />
 
-          <div className="relative overflow-hidden rounded-2xl border border-bone/10 bg-black shadow-lift">
+          <div
+            ref={(element) => {
+              if (element) playerSlotRefs.current.set(index, element);
+              else playerSlotRefs.current.delete(index);
+            }}
+            className="relative overflow-hidden rounded-2xl border border-bone/10 bg-black shadow-lift"
+          >
             <div className="aspect-video">
-              {index === activeIndex ? (
-                <iframe
-                  id={`mobile-player-${index}`}
-                  src={embedUrl(item.youtube_id, item.playback_start_sec, {
-                    autoplay: !reducedMotion,
-                    muted: true,
-                    inline: true,
-                  })}
-                  onLoad={(event) => handlePlayerLoad(event.currentTarget)}
-                  title={displayTitle(item)}
-                  allow="autoplay; encrypted-media; picture-in-picture"
-                  allowFullScreen
-                  className="h-full w-full"
-                />
-              ) : item.thumbnail_url ? (
+              {item.thumbnail_url ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={item.thumbnail_url}
