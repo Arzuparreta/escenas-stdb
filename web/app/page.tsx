@@ -55,6 +55,22 @@ export default function HomePage() {
   const searchRequestRef = useRef<AbortController | null>(null);
   const loadMoreRef = useRef(false);
 
+  // Deep-link: ?v=<youtubeId>&t=<sec>&title=&credit= abre la escena en el modal.
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search);
+    const v = p.get("v");
+    if (!v) return;
+    setNowPlaying({
+      youtubeId: v,
+      startSec: Number(p.get("t") || 0) || 0,
+      youtubeUrl: `https://www.youtube.com/watch?v=${v}`,
+      title: p.get("title") || "Escena",
+      credit: p.get("credit"),
+      sceneLabel: null,
+      quote: null,
+    });
+  }, []);
+
   const searching = searchSpec.query.length >= 2;
   const current = searching ? search : discover;
   const activeIndex = searching ? searchIndex : discoverIndex;
