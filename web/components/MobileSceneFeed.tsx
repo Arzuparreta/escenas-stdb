@@ -30,8 +30,16 @@ function syncPlayer(
   soundOn: boolean,
   autoplay: boolean,
 ) {
-  playerCommand(frame, soundOn ? "unMute" : "mute");
-  if (autoplay) playerCommand(frame, "playVideo");
+  if (!autoplay) {
+    playerCommand(frame, soundOn ? "unMute" : "mute");
+    return;
+  }
+
+  // Mobile browsers only allow reliable autoplay while muted. Start the new
+  // iframe muted, then restore the user's sound preference once play is queued.
+  playerCommand(frame, "mute");
+  playerCommand(frame, "playVideo");
+  if (soundOn) playerCommand(frame, "unMute");
 }
 
 export function MobileSceneFeed({
@@ -128,7 +136,9 @@ export function MobileSceneFeed({
   }
 
   function toggleSound() {
-    setSoundOn((current) => !current);
+    const nextSoundOn = !soundOn;
+    playerCommand(activeFrameRef.current, nextSoundOn ? "unMute" : "mute");
+    setSoundOn(nextSoundOn);
   }
 
   if (!loading && items.length === 0) {
